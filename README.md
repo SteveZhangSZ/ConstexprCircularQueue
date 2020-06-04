@@ -1,0 +1,1 @@
+This is a constexpr circular queue. The max capacity must be known at compile time. This requires C++17.

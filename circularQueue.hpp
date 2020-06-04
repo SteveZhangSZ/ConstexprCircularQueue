@@ -1,5 +1,4 @@
 #include <cstddef>
-//Modify circular queue so you can pass arguments like this
 template<class T ,std::size_t N /*Max capacity*/>
 class circularQueue{
     union myUnion{
