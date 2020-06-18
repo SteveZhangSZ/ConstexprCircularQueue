@@ -1,0 +1,21 @@
+//std::enable_if_t<std::is_constructible<T, Args&&...>::value>
+//template<typename... t, typename std::enable_if<(std::is_constructible_v<t, T> && ...)>::value>::type* >
+//template<typename... t, typename std::enable_if_t<std::is_same<T, t&&...>::value>>
+//std::cout << std::boolalpha << std::is_constructible<std::pair<uint_least16_t,uint_least16_t>, char, char>::value << '\n';
+//constexpr myUnion(const T& theT) : value{theT} {}
+//constexpr T& operator=(const T& other){return value = other;}
+//static_assert(sizeof...(theList) <= N, "The number of elements must be less than or equal to N\n");
+            /*
+            std::size_t first{head};
+            if(other.tail < other.head){ //Only copy elements between other.head and other.tail
+                for(; first < N; ++first){
+                    mS.theArray[first] = other.mS.theArray[first];
+                }
+                for(first = 0; first < other.tail; ++first){
+                    mS.theArray[first] = other.mS.theArray[first];
+                }
+            }
+            else{
+                for(; first < other.tail; ++first) mS.theArray[first] = other.mS.theArray[first];
+            }
+            */
