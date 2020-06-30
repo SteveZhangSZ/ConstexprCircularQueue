@@ -1,162 +1,229 @@
 #ifndef CIRCULARQUEUEHPP
 #define CIRCULARQUEUEHPP
 #include <cstddef>
+#include <new> //For placement new
 #include <type_traits>
-
-template<class T ,std::size_t N /*Max capacity*/, 
-typename Idxtype = std::size_t /*Integral type to store indices. May change,
-like to uint_least16_t, to lower space usage*/>
-class circularQueue{
-    static_assert(std::is_integral<Idxtype>::value, "Idxtype must be an integral type.");
-    union myUnion{
-        class emptyStruct{} forConstexprCtor;
-        T value;
-        //Default constructor for myUnion. Initializes the dummy class forConstexprCtor for constexpr-ness
-        constexpr myUnion() : forConstexprCtor{} {}
-        //constexpr myUnion(T theT) : value{std::move(theT)} {};
-
-        //template<class PossibleUnion,typename = typename std::enable_if<std::is_same<PossibleUnion, myUnion>::value >::type>
-        //constexpr myUnion(PossibleUnion&& other) : value{other.value} {}
-    /*
-        constexpr myUnion(const myUnion& other) : value{other.value} {}
-        constexpr myUnion(myUnion& other) : value{other.value} {}
-        constexpr myUnion(myUnion&& other)  : value{std::move(other.value)} {}
-    */
-        template<typename... Args,typename = typename std::enable_if<std::is_constructible_v<T,Args>...>::type> 
-        constexpr myUnion(Args&&... args) : value(std::forward<Args>(args)...) {}
-/*
-            if constexpr(std::is_same<AnotherUnion, myUnion&&>::value){
-                value = std::move(other.value);
-            } else {
-                value = other.value;
+template<class T, bool B> union Cell;//bool B == std::is_trivially_destructible<T>::value
+template<class T>
+union Cell<T, true>{
+    class emptyClass{} forConstexprCtor;
+    T value;
+    //Initializes forConstexprCtor because constexpr union constructors must initialize a member
+    constexpr Cell() : forConstexprCtor{} {}
+    //Initializes value with the provided parameter arguments
+    template<typename... Args> 
+    constexpr Cell(Args&&... args) : value((args)...) {}
+};
+template<class T>
+union Cell<T, false>{
+    class emptyClass{} forConstexprCtor;
+    T value;
+    constexpr Cell() : forConstexprCtor{} {}
+    template<typename... Args> 
+    constexpr Cell(Args&&... args) : value((args)...) {}
+    ~Cell(){} //Included because Cell<T, false>'s destructor is deleted
+};
+template<class T, std::size_t N, typename Idxtype>
+struct commonQueueFunctions{
+    static_assert(std::is_integral<Idxtype>::value, "Idxtype must be an integral type\n");
+    constexpr bool full() const noexcept {return theSize == N;} //Check if queue is full
+    constexpr bool empty() const noexcept {return !theSize;} //Check if queue is empty
+    constexpr Idxtype size() const noexcept {return theSize;} //Returns the queue's current size
+    //Returns the max number of elements the queue may hold
+    constexpr std::size_t capacity() const noexcept {return N;}
+    //Returns the element next to be popped. Undefined behavior if queue is empty
+    constexpr const T& front() const {return theArray[head].value;}
+    constexpr T& front() {return theArray[head].value;}
+    //Returns the element last to be popped. Undefined behavior if queue is empty
+    constexpr const T& back() const {return theArray[tail - 1].value;}
+    constexpr T& back() {return theArray[tail - 1].value;}
+    protected:
+        Idxtype head{0}, tail{0}, theSize{0};
+        Cell<T, std::is_trivially_destructible<T>::value> theArray[N];
+        constexpr void clear(){ //Destroys value in the queue when value is the active member
+            if(this->head > this->tail|| (this->head == this->tail && this->theSize == N)){
+                for(; this->head < N; ++this->head){
+                    this->theArray[this->head].value.~T();
+                }
+                this->head = 0;
+            } 
+            for(; this->head < this->tail; ++this->head){
+                this->theArray[this->head].value.~T();
             }
-            */
-    /*
-        template<typename AnotherUnion>constexpr void operator=(AnotherUnion&& other){
-            if constexpr(std::is_same<AnotherUnion, myUnion&&>::value){
-                value = std::move(other.value);
-            } else if constexpr(std::is_same<AnotherUnion,const myUnion&>::value){
-                value = other.value;
-            } else{
-                value = other.value;
+        }
+        constexpr commonQueueFunctions() = default;
+        constexpr commonQueueFunctions(const commonQueueFunctions& other) : head{other.head},
+        tail{other.tail}, theSize(other.theSize){ //Copy constructor
+            std::size_t originalHead(other.head);
+            //If other is full, there's a chance that other.head == other.tail
+            if(other.head > other.tail || (other.head == other.tail && other.theSize == N)){
+                for(; originalHead < N; ++originalHead){
+                    if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                        theArray[originalHead] = other.theArray[originalHead];
+                    } else {
+                        new(&theArray[originalHead].value)T(other.theArray[originalHead].value);
+                    }
+                }
+                originalHead = 0;
+            }
+            for(; originalHead < other.tail; ++originalHead){
+                if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                    theArray[originalHead] = other.theArray[originalHead];
+                } else {
+                    new(&theArray[originalHead].value)T(other.theArray[originalHead].value);
+                }
             }
         }
-    */
-        //~myUnion(){}
-     /*   
-        constexpr void operator=(const myUnion& other){value = other.value;}
-        constexpr void operator=(myUnion& other){value = other.value;}
-        constexpr void operator=(myUnion&& other){value = std::move(other.value);}
-    */
-    /*
-        constexpr void operator=(const T& other){*this = myUnion(other);}
-        constexpr void operator=(T& other){*this = myUnion(other);}
-        constexpr void operator=(T&& other){*this = myUnion(other);}
-    */
-    };
-    struct myStruct{
-        myUnion theArray[N];
-        template<typename... t>
-        constexpr myStruct(t&&... theList) : theArray{(theList)...} {}
-    } mS;
-    //Head == idx of element at the front. Tail == idx of last element + 1. theSize == queue's size
-    Idxtype head, tail, theSize;
-    
-    public:
-        constexpr circularQueue() : head{0}, tail{0}, theSize{0} {}
-        constexpr circularQueue(const circularQueue<T,N>& other) : mS{other.mS}, head{other.head}, 
-        tail{other.tail}, theSize{other.theSize} {}
-        
-        constexpr circularQueue(circularQueue<T,N>& other) : circularQueue{const_cast<circularQueue<T,N> const&>(other)} {}
-        
-        constexpr circularQueue(circularQueue<T,N>&& other) : mS{std::move(other.mS)}, head{std::move(other.head)}, 
-        tail{std::move(other.tail)}, theSize{std::move(other.theSize)} {}
-
-        template<typename... Args/*, typename = typename std::enable_if<std::is_constructible_v<myStruct, Args>... >::type*/ >
-        explicit constexpr circularQueue(Args&&... theList) : mS{(theList)...}, head{0},
-        tail{sizeof...(theList)}, theSize{sizeof...(theList)}{}
-    
-        //For push and emplace, if the 
-        //data member has a non-trivial special member function (copy/move constructor, copy/move assignment, 
-        //or destructor), that function is deleted by default in the union and needs to be defined explicitly 
-        //by the programmer.
-        //template<class U>
-        constexpr bool push(T theObj){
-            //static_assert(std::is_same<typename std::decay<U>::type, T>::value || std::is_convertible<U,T>::value );
-            if(theSize == N){
-                return false;//queue is full
+        constexpr commonQueueFunctions(commonQueueFunctions&& other) : head{other.head},
+        tail{std::move(other.tail)}, theSize(std::move(other.theSize)){ //Move constructor
+            std::size_t originalHead(std::move(other.head));
+            if(other.head > other.tail || (other.head == other.tail && other.theSize == N)){
+                for(; originalHead < N; ++originalHead){
+                    if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                        theArray[originalHead] = std::move(other.theArray[originalHead]);
+                    } else {
+                        new(&theArray[originalHead].value)T(std::move(other.theArray[originalHead].value));
+                    }
+                }
+                originalHead = 0;
             }
-            mS.theArray[(tail == N ? (tail = 0)++ : tail++)] = myUnion(std::move(theObj));
-            //mS.theArray[(tail == N ? (tail = 0)++ : tail++)].value = std::move(theObj);
-            return ++theSize; //++theSize always > 0. Return true
-        }
-        template<typename ...Args> 
-        constexpr bool emplace(Args&&... args){
-            if(theSize == N){
-                return false;//queue is full
+            for(; originalHead < other.tail; ++originalHead){
+                if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                    theArray[originalHead] = std::move(other.theArray[originalHead]);
+                } else {
+                    new(&theArray[originalHead].value)T(std::move(other.theArray[originalHead].value));
+                }
             }
-            mS.theArray[(tail == N ? (tail = 0)++ : tail++)] = myUnion(std::forward<Args>(args)...);
-            //mS.theArray[(tail == N ? (tail = 0)++ : tail++)].value = T(std::forward<Args>(args)...);
-            return ++theSize;
         }
-
-        constexpr const T& front() const{
-            return mS.theArray[head].value;
-        }
-
-        constexpr bool pop() noexcept{
-            if(!theSize) return false; //If it's empty, pop fails
-            (head == N ? head = 0 : head++);
-            return theSize--;//Even if theSize == 1, theSize-- will > 0 so this returns true.
-        }
-
-        constexpr bool empty() const noexcept{
-            return !theSize;
-        }
-        constexpr Idxtype size() const noexcept{
-            return theSize;
-        }
-        constexpr std::size_t capacity() const noexcept{
-            return N;
-        }
-        //Assignment
-        constexpr circularQueue& operator=(const circularQueue<T,N>& other){ 
-            std::size_t first{head = other.head};
+        constexpr commonQueueFunctions& operator=(const commonQueueFunctions& other){//Copy assignment
+            std::size_t originalHead(head = other.head);
+            if constexpr((std::is_trivially_copy_assignable<T>::value && 
+            std::is_trivially_destructible<T>::value) == false){
+                clear();
+            } 
+            if(other.head > other.tail || (other.head == other.tail && other.theSize == N)){
+                for(; originalHead < N; ++originalHead){
+                    if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                        theArray[originalHead] = other.theArray[originalHead];
+                    } else {
+                        new(&theArray[originalHead].value)T(other.theArray[originalHead].value);
+                    }
+                }
+                originalHead = 0;
+            }
+            for(; originalHead < other.tail; ++originalHead){
+                if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                    theArray[originalHead] = other.theArray[originalHead];
+                } else {
+                    new(&theArray[originalHead].value)T(other.theArray[originalHead].value);
+                }
+            }
             tail = other.tail;
             theSize = other.theSize;
-            if(other.tail < other.head){ //Only need to copy elements from other.head to other.tail
-                for(; first < N; ++first){
-                    mS.theArray[first] = other.mS.theArray[first];
-                }
-                for(first = 0; first < tail; ++first){
-                    mS.theArray[first] = other.mS.theArray[first];
-                }
-            }
-            else{
-                for(; first < other.tail; ++first){
-                    mS.theArray[first] = other.mS.theArray[first];
-                }
-            }
             return *this;
         }
-        constexpr circularQueue& operator=(circularQueue<T,N>&& other){ 
-            std::size_t first{head = std::move(other.head)};
+        constexpr commonQueueFunctions& operator=(commonQueueFunctions&& other){ //Move assignment
+            std::size_t originalHead(head = std::move(other.head));
+            if constexpr((std::is_trivially_copy_assignable<T>::value && 
+            std::is_trivially_destructible<T>::value) == false){
+                clear();
+            }
+            if(other.head > other.tail || (other.head == other.tail && other.theSize == N)){
+                for(; originalHead < N; ++originalHead){
+                    if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                        theArray[originalHead] = std::move(other.theArray[originalHead]);
+                    } else {
+                        new(&theArray[originalHead].value)T(std::move(other.theArray[originalHead].value));
+                    }
+                }
+                originalHead = 0;
+            }
+            for(; originalHead < other.tail; ++originalHead){
+                if constexpr(std::is_trivially_copy_assignable<T>::value && 
+                                 std::is_trivially_destructible<T>::value){
+                    theArray[originalHead] = std::move(other.theArray[originalHead]);
+                } else {
+                    new(&theArray[originalHead].value)T(std::move(other.theArray[originalHead].value));
+                }
+            }
             tail = std::move(other.tail);
             theSize = std::move(other.theSize);
-            if(other.tail < other.head){ //Only need to copy elements from other.head to other.tail
-                for(; first < N; ++first){
-                    mS.theArray[first] = std::move(other.mS.theArray[first]);
-                }
-                for(first = 0; first < tail; ++first){
-                    mS.theArray[first] = std::move(other.mS.theArray[first]);
-                }
-            }
-            else{
-                for(; first < other.tail; ++first){ 
-                    mS.theArray[first] = std::move(other.mS.theArray[first]);
-                }
-            }
             return *this;
         }
+        template<typename... Args> //Constructor which accepts arguments to construct theArray
+        constexpr commonQueueFunctions(std::size_t theHead, std::size_t theTail, std::size_t paramSize,
+        Args&&... theList) : head(theHead), tail(theTail), theSize(paramSize),theArray{(theList)...}{}
 };
+template<class T, std::size_t N, bool B, typename Idxtype> struct theQueue;
+template<class T, std::size_t N, typename Idxtype>
+struct theQueue<T,N, true, Idxtype> : public commonQueueFunctions<T, N, Idxtype>{
+    constexpr theQueue() = default; //Default constructor
+    //Constructor which accepts arguments to construct theArray
+    template<typename... Args, typename = 
+    typename std::enable_if<(... && std::is_constructible_v<T,Args>)>::type > 
+    explicit constexpr theQueue(Args&&... theList) : commonQueueFunctions<T, N, Idxtype>(0, sizeof...(theList),
+    sizeof...(theList),std::forward<Args>(theList)...){}
+    constexpr bool push(T theObj){//Pushes the given element value to the end of the queue
+        if(this->theSize == N){
+            return false;//queue is full
+        }
+        this->theArray[(this->tail == N ? (this->tail = 0)++ : this->tail++)] = Cell<T,true>(std::move(theObj));
+        return ++this->theSize; //++theSize always > 0. Return true
+    }
+    template<typename ...Args> 
+    constexpr bool emplace(Args&&... args){ //Same as push, but the element is constructed in-place
+        if(this->theSize == N){
+            return false;//queue is full
+        }
+        this->theArray[(this->tail == N ? (this->tail = 0)++ : this->tail++)] = Cell<T,true>((args)...);
+        return ++this->theSize;
+    }
+    constexpr bool pop() noexcept{ //Removes the element at the queue's front
+        if(!this->theSize) return false; //If it's empty, pop fails
+        (this->head == N ? this->head = 0 : ++this->head);
+        return this->theSize--;//Even if theSize == 1, theSize-- will > 0 so this returns true.
+    }
+};
+template<class T, std::size_t N, typename Idxtype>
+struct theQueue<T,N, false, Idxtype>  : public commonQueueFunctions<T, N, Idxtype>{
+    constexpr theQueue() = default;
+    template<typename... Args, typename = 
+    typename std::enable_if<(... && std::is_constructible_v<T,Args>) >::type > 
+    explicit constexpr theQueue(Args&&... theList) : commonQueueFunctions<T, N, Idxtype>(0, sizeof...(theList),
+    sizeof...(theList),std::forward<Args>(theList)...) {}
+
+    constexpr bool push(T theObj){
+        if(this->theSize == N){
+            return false;//queue is full
+        }
+        new(&this->theArray[(this->tail == N ? (this->tail = 0)++ : this->tail++)].value)T(std::move(theObj));
+        return ++this->theSize; //++theSize always > 0. Return true
+    }
+    template<typename ...Args> 
+    constexpr bool emplace(Args&&... args){
+        if(this->theSize == N){
+            return false;//queue is full
+        }
+        new(&this->theArray[(this->tail == N ? (this->tail = 0)++ : this->tail++)].value)T((args)...);
+        return ++this->theSize;
+    }
+    constexpr bool pop(){
+        if(!this->theSize) return false; //If it's empty, pop fails
+        this->theArray[(this->head == N ? this->head = 0 : this->head++)].value.~T();
+        return this->theSize--;
+    }
+    ~theQueue(){ //Destroys every Cell's value where value is the active member
+        this->clear();
+    }
+};
+template<class T, std::size_t N, typename Idxtype = std::size_t>
+using circularQueue = 
+theQueue<T,N,std::is_trivially_destructible<T>::value && std::is_trivially_copy_assignable<T>::value, Idxtype>;
 #endif //CIRCULARQUEUEHPP
