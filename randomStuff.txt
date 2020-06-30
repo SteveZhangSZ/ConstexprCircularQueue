@@ -19,3 +19,81 @@
                 for(; first < other.tail; ++first) mS.theArray[first] = other.mS.theArray[first];
             }
             */
+            git rm --cached -r  .vscode/
+
+#include <iostream>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+template<std::size_t N>
+struct commonContainerFunctions{
+    std::size_t head, tail, theSize;
+    constexpr commonContainerFunctions() : head{0}, tail{1},theSize(0) {}
+    constexpr commonContainerFunctions(std::size_t a, std::size_t b, std::size_t c) : head{a}, tail{b},theSize(c) {}
+    
+    constexpr std::size_t size() const noexcept{return theSize;}
+    
+    constexpr std::size_t capacity() const noexcept{return N;}
+    
+    constexpr void front(){}
+};
+
+template<class T, std::size_t N, bool B> struct myQueue;
+
+template<class T, std::size_t N>
+struct myQueue<T,N, true> : commonContainerFunctions<N>{
+    constexpr myQueue() : commonContainerFunctions<N>() {}
+    constexpr myQueue(std::size_t a, std::size_t b, std::size_t c) : commonContainerFunctions<N>(a,b,c){}
+};
+
+template<class T, std::size_t N>
+struct myQueue<T, N, false> : myQueue<T,N, true>{
+     constexpr myQueue(std::size_t a, std::size_t b, std::size_t c) : myQueue<T,N, true>(a,b,c){}
+     
+     ~myQueue<T, N, false>(){std::cout << "destroying myQueue<T, N, false>\n";}
+};
+template<class T, std::size_t N>
+using theQueue = myQueue<T,N,std::is_trivially_destructible<T>::value>;
+
+int main()
+{
+    //std::cout << std::boolalpha << std::is_trivially_copy_assignable<std::pair<const int,int>>::value;
+    std::cout << std::boolalpha << std::is_trivially_destructible<std::string>::value << '\n';
+    constexpr theQueue<char, 10> mQ, anotherMQ(1,2,3);
+    std::cout << mQ.capacity() << '\n' << mQ.size() << '\n';
+    std::cout << anotherMQ.head <<  ' ' << anotherMQ.tail << ' ' << anotherMQ.theSize << '\n';
+    //theQueue<std::string, 10> aStringmq(2,4,6);
+    std::cout << std::is_trivially_destructible<std::string_view>::value << '\n';
+    
+    return 0;
+}
+/*,typename = typename std::enable_if<std::is_constructible_v<T,Args>...>::type*/
+/*
+union myUnion{
+        class emptyStruct{} forConstexprCtor;
+        T value;
+        //Default constructor for myUnion. Initializes the dummy class forConstexprCtor for constexpr-ness
+        constexpr myUnion() : forConstexprCtor{} {}
+        //Constructor that makes "value" the active member
+        template<typename... Args> 
+        constexpr myUnion(Args&&... args) : value((args)...) {}
+    } this->theArray[N];
+*/
+/*,typename = typename std::enable_if<std::is_constructible_v<T,Args>...>::type*/
+/*
+    union myUnion{
+        class emptyStruct{} forConstexprCtor;
+        T value;
+        //Default constructor for myUnion. Initializes the dummy class forConstexprCtor for constexpr-ness
+        constexpr myUnion() : forConstexprCtor{} {}
+        template<typename... Args/*,typename = typename std::enable_if<std::is_constructible_v<T,Args>...>::type*/> 
+        constexpr myUnion(Args&&... args) : value((args)...) {}
+        ~myUnion(){}
+    } this->theArray[N];
+*/
+//typename std::enable_if_t<!std::is_same_v<theQueue<T,N, true, Idxtype>,std::decay_t<Args>...>>> 
+/*
+constexpr Idxtype getHead() const noexcept{return commonQueueFunctions<Idxtype>::head;}
+constexpr Idxtype getTail() const noexcept{return commonQueueFunctions<Idxtype>::tail;}
+constexpr Idxtype getSize() const noexcept{return commonQueueFunctions<Idxtype>::theSize;}
+*/
