@@ -129,7 +129,7 @@ struct commonQueueFunctions{
             return *this;
         }
         constexpr commonQueueFunctions& operator=(commonQueueFunctions&& other){ //Move assignment
-            std::size_t originalHead(head = std::move(other.head));
+            std::size_t originalHead(head = other.head);
             if constexpr((std::is_trivially_copy_assignable<T>::value && 
             std::is_trivially_destructible<T>::value) == false){
                 clear();
