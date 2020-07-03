@@ -38,3 +38,12 @@ These unions ensure that the storage for the objects of type T will have proper 
 
 The entire queue allocates on the stack so it should be faster when you know the size at compile time and are 
 working with a small amount of elements.
+
+### Example Usage
+```
+#include "circularQueue.hpp"
+int main(){
+    circularQueue<std::string, 3> theStringCQ("First", "Second", "Third");
+    constexpr circularQueue<int, 3> theIntCQ(0, 1, 2);
+}
+```
