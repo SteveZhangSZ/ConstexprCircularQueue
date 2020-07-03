@@ -33,6 +33,8 @@ void testCQ(){
     theVecCQ.pop();
     theVecCQ.push({4,4});
     std::cout << "theVecCQ.front().size() is " << theVecCQ.front().size() << '\n';
+    circularQueue<std::string*, 3> onHeap(new std::string("Heap one"));
+    delete onHeap.front();
 }
 
 void printCQ(){

@@ -45,5 +45,7 @@ working with a small amount of elements.
 int main(){
     circularQueue<std::string, 3> theStringCQ("First", "Second", "Third");
     constexpr circularQueue<int, 3> theIntCQ(0, 1, 2);
+    circularQueue<std::string*, 3> onHeap(new std::string("Heap one"));
+    delete onHeap.front();
 }
 ```

@@ -1,7 +1,8 @@
 .vscode/
 mainThree.cpp
-.main.dSYM/
-.mainTwo.dSYM/
-.mainThree.dSYM/
+main
+/main.dSYM/
+/mainTwo.dSYM/
+/mainThree.dSYM/
 /main*
 randomStuff.txt
