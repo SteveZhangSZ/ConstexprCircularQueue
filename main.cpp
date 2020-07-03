@@ -1,88 +1,96 @@
-#include <iostream> //Print statements for debugging
+#include <iostream>
+#include <vector>
 #include "circularQueue.hpp"
-//Outdated tests. Do not run
-void testingCircularQueue(){
-    circularQueue<std::pair<uint_least16_t,uint_least16_t>, 3> cQ(std::pair{59991,2}, 
-    std::pair{3,4} );
-    std::cout << std::boolalpha << cQ.push({3,3}) << ' ' << cQ.push({13,13}) << ' '
-    << cQ.push({32,23}) << ' ' << cQ.push({321,231}) << ' ' << cQ.push({321,231})
-    << ' ' << cQ.push({321,231}) << '\n';
+void testCQ(){
+    std::cout << "Begin testCQ()\n";
+    circularQueue<std::pair<short,short>, 3> thePairCQ(std::pair<short,short>{44,44}), secondPairCQ;
+    thePairCQ.push({12,34}); 
+    thePairCQ.emplace(98,10);
+    thePairCQ.pop();
+    circularQueue<std::pair<short,short>, 3> thirdPairCQ(thePairCQ);
+    secondPairCQ = thePairCQ; //L value assignment with non trivial copy assignment
+    secondPairCQ = std::move(thirdPairCQ); //R value assignment with non trivial copy assignment
+    circularQueue<char, 3> theCharCQ('A','B');
+    std::cout << std::boolalpha << theCharCQ.empty() << '\n';
+    circularQueue<char, 3> secondCharCQ(theCharCQ); //copy by l value, trivially copyable type
 
-    cQ.pop();
-    std::cout << cQ.push({3,3}) << ' ' << cQ.push({321,231}) << '\n';
-    std::cout << "Begin popping\n";
-    std::cout << cQ.pop() << ' ' << cQ.pop() << ' ' << cQ.pop() << ' ' << cQ.pop() << '\n';
+    //copy by r value, trivially copyable type
+    [[maybe_unused]] circularQueue<char, 3> thirdCharCQ(std::move(secondCharCQ)); 
+    theCharCQ.push('C');
+    circularQueue<std::string, 3> theStringCQ, secondStringCQ("Rhubarb");
+    theStringCQ.push("Hello");
+    theStringCQ.pop();
+    theStringCQ = secondStringCQ; //L value assignment with non trivial copy assignment
 
-    std::cout << "Initially empty queue\n";
-    circularQueue<char, 5> charCq;
-    std::cout << charCq.pop() << '\n';
-    charCq.push('D');
-    std::cout << charCq.front() << ' ' << charCq.pop() << '\n';
-
-    circularQueue<char, 2> newQueue;
-    std::cout <<  newQueue.push('a') << ' ' 
-    << newQueue.push('b') << ' ' 
-    << newQueue.push('c') << ' '
-    << newQueue.pop() << ' ' << newQueue.push('Z') << '\n';
-
-    const circularQueue<char, 2> copy(newQueue); //test copy with non const obj
-    circularQueue<char, 2> copyOfcopy(copy);//test copy with const obj
-    [[maybe_unused]]  circularQueue<char, 2> fromTemp((circularQueue<char, 2>('E', 'Z'))); //from temp
-    copyOfcopy = circularQueue<char, 2>('9','2');//assignment with r value
-
-    std::cout << "Printing copyOfcopy\n";
-    for(; !copyOfcopy.empty(); copyOfcopy.pop()) std::cout << copyOfcopy.front() << ' ';
-    std::cout << '\n';
-
-
-    copyOfcopy = copy; //assignment with const copy
-    copyOfcopy = newQueue;//assignment with non const copy
-
-    circularQueue<char, 7> sevenChar('a','b');
-    sevenChar = circularQueue<char, 7>('Z','Y','X','W','V', 'U', 'T'); //assignment with r value
-
-    constexpr circularQueue<char, 2, uint_least8_t> notAnError('A', 'Z');
-    [[maybe_unused]] constexpr circularQueue<char, 2, uint_least8_t> copyFromConstexpr(notAnError);
-    std::cout << sizeof(copy) << ' ' << sizeof(notAnError) << '\n';
-    struct A{};
-    //[[maybe_unused]] constexpr circularQueue<char, 2, A> errorThisis;
-    for(circularQueue<char, 5, uint_least8_t> testingFrontAndPop{'A', 'B', 'C', 'D', 'E'}; 
-    !testingFrontAndPop.empty(); testingFrontAndPop.pop()){
-        std::cout << testingFrontAndPop.front() << ' ';
-    }
-    std::cout << '\n';
-    //circularQueue<std::string,5> stringCQ;
-    //stringCQ.push("hi");
+    //copy by l value, non trivially copyable type
+    circularQueue<std::string, 3> copyStringCQ(secondStringCQ),thirdStringCQ;
+    thirdStringCQ = copyStringCQ;
+    thirdStringCQ = circularQueue<std::string, 3>("Something here");
+    [[maybe_unused]] const circularQueue<std::string, 3> emptyQueue;
+    circularQueue<std::vector<int>, 2> theVecCQ;
+    theVecCQ.emplace(4,4);
+    std::cout << "theVecCQ.front().size() is " << theVecCQ.front().size() << '\n';
+    theVecCQ.pop();
+    theVecCQ.push({4,4});
+    std::cout << "theVecCQ.front().size() is " << theVecCQ.front().size() << '\n';
 }
-constexpr bool otherTest(){
-    circularQueue<char, 2> newQueue, otherQueue;
-    newQueue = otherQueue;
-    constexpr char anA{'a'};
-    newQueue.push(anA);
-    newQueue.push('b');
-    newQueue.push('c');
-    newQueue.pop();
-    newQueue.emplace('d');
-    newQueue.pop();
-    newQueue.emplace('e');
-    struct numPair{
-        uint_least16_t a,b;
-        constexpr numPair() : a{0}, b{0} {}
-        constexpr numPair(uint_least16_t theA, uint_least16_t theB) : a{theA}, b{theB} {}
+
+void printCQ(){
+    std::cout << "Begin printCQ\n";
+    circularQueue<std::string, 3> theStringCQ("First");
+    for(theStringCQ.push("Second"), theStringCQ.emplace("Third");
+    !theStringCQ.empty(); theStringCQ.pop()){
+        std::cout << theStringCQ.front() << '\n';
+    }
+    theStringCQ.emplace("Fourth");
+    std::cout << theStringCQ.back() << '\n';
+    
+}
+
+void testCopyCQ(){
+    std::cout << "Begin testCopyCQ\n";
+    struct printStruct{
+        int theInt;
+        printStruct() : theInt{-1} {std::cout << "printStruct's default ctor\n";}
+        printStruct(int a) : theInt{a} {std::cout << "printStruct's int ctor\n";}
     };
-    circularQueue<numPair, 3> pairQueue(numPair{4,42});
-    pairQueue.push({3,55});
-    [[maybe_unused]] constexpr circularQueue<std::pair<uint_least16_t,uint_least16_t>, 3> cQ(std::pair{59991,2}, 
-    std::pair{3,4} );
+    circularQueue<printStruct, 2> firstPrintCQ((printStruct(21)),(printStruct()));
+    std::cout << "Begin the copy\n";
+    circularQueue<printStruct, 2> copyOfPrintCQ(firstPrintCQ);
+    circularQueue<printStruct, 2> secondCopyOfPrintCQ(std::move(copyOfPrintCQ));
+}
+
+void fullCQ(){
+    std::cout << "Begin fullCQ\n";
+    circularQueue<char, 2> theFullCQ, anotherCQ;
+    theFullCQ.push('A');
+    theFullCQ.push('B');
+    theFullCQ.push('C');
+    theFullCQ.pop();
+    theFullCQ.push('C');
+    theFullCQ.push('D');
+    anotherCQ = std::move(theFullCQ);
+}
+constexpr bool atCompileTimeCQ(){
+    circularQueue<char, 3> theCharCQ('A','B'), fourthCQ;
+    circularQueue<char, 3> secondCharCQ(theCharCQ); //copy by l value
+    circularQueue<char, 3> thirdCharCQ(std::move(secondCharCQ)); //copy by r value
+    theCharCQ.push('C');
+    thirdCharCQ = circularQueue<char, 3>('X','Y'); //assignment via r value
+    thirdCharCQ = theCharCQ; //assignment via l value
+    thirdCharCQ.front() = 'D';
+    fourthCQ.emplace('A');
+    fourthCQ.pop();
+    [[maybe_unused]] circularQueue<char, 3> fifthCQ(theCharCQ), sixthCQ(circularQueue<char, 3>('X','Y'));
     return true;
 }
 
 int main(){
-    //std::cout << "Begin testing\n";
-testingCircularQueue();
-if constexpr(otherTest()) std::cout << "If constexpr successful\n";
-//static_assert(otherTest());
-//std::cout << std::is_integral<std::string>::value << '\n';
-//std::cout << std::boolalpha << std::is_constructible<std::pair<uint_least16_t,uint_least16_t>,std::pair<uint_least16_t,uint_least16_t>>::value << '\n';
+    testCQ();
+    printCQ();
+    static_assert(atCompileTimeCQ());
+    testCopyCQ();
+    fullCQ();
+    //atCompileTimeCQ();
 }
 //clang++ -Wall -std=c++1z -stdlib=libc++ -g main.cpp -o main && ./main
