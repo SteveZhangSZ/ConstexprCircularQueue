@@ -134,10 +134,13 @@ struct theQueue<T, N, true, Idxtype>{
         if(theSize == N){
             return false;//queue is full
         }
+        if(tail == N){
+            tail = 0;
+        }
         if constexpr(std::is_trivially_copy_assignable<T>::value){
-            theArray[(tail == N ? (tail = 0)++ : tail++)] = Cell<T,true>(std::move(theObj));
+            theArray[tail++] = Cell<T,true>(std::move(theObj));
         } else {
-            new(&theArray[(tail == N ? (tail = 0)++ : tail++)].value)T(std::move(theObj));
+            new(&theArray[tail++].value)T(std::move(theObj));
         }
         return ++theSize; //++theSize always > 0. Return true
     }
@@ -146,21 +149,25 @@ struct theQueue<T, N, true, Idxtype>{
         if(theSize == N){
             return false;//queue is full
         }
+        if(tail == N){
+            tail = 0;
+        }
         if constexpr(std::is_trivially_copy_assignable<T>::value){
-            theArray[(tail == N ? (tail = 0)++ : tail++)] = Cell<T,true>((args)...);
+            theArray[tail++] = Cell<T,true>((args)...);
         } else {
-            new(&theArray[(tail == N ? (tail = 0)++ : tail++)].value)T((args)...);
+            new(&theArray[tail++].value)T((args)...);
         }
         return ++theSize;
     }
     constexpr bool pop() noexcept{ //Removes the element at the queue's front
         if(!theSize) return false; //If it's empty, pop fails
         if constexpr(std::is_trivially_destructible<T>::value){
-            (head == N ? head = 0 : ++head);
+            (head == N - 1 ? head = 0 : ++head);
         } else {
-            theArray[(head == N ? head = 0 : ++head)].value.~T();
+            theArray[(head == N ? head = 0 : head++)].value.~T();
         }
-        return theSize--;//Even if theSize == 1, theSize-- will > 0 so this returns true.
+        --theSize;
+        return true;
     }
     
     //Element Access functions
