@@ -1,6 +1,6 @@
 .vscode/
-mainThree.cpp
-main
+*.cpp
+*.dSYM
 /main.dSYM/
 /mainTwo.dSYM/
 /mainThree.dSYM/
