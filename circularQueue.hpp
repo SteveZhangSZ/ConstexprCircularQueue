@@ -164,16 +164,22 @@ struct theQueue<T, N, true, Idxtype>{
         if constexpr(std::is_trivially_destructible<T>::value){
             (head == N - 1 ? head = 0 : ++head);
         } else {
-            theArray[(head == N ? head = 0 : head++)].value.~T();
+            if(head == N - 1){
+                theArray[head].value.~T();
+                head = 0;
+            } else {
+                theArray[head++].value.~T();
+            }
         }
         --theSize;
         return true;
     }
     
-    //Element Access functions
+    //Capacity Methods
     constexpr bool full() const noexcept {return theSize == N;} //Check if queue is full
     constexpr bool empty() const noexcept {return !theSize;} //Check if queue is empty
     constexpr Idxtype size() const noexcept {return theSize;} //Returns the queue's current size
+    //Element Access functions
     //Returns the max number of elements the queue may hold
     constexpr std::size_t capacity() const noexcept {return N;}
     //Returns the element next to be popped. Undefined behavior if queue is empty

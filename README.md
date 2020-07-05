@@ -47,5 +47,6 @@ int main(){
     constexpr circularQueue<int, 3> theIntCQ(0, 1, 2);
     circularQueue<std::string*, 3> onHeap(new std::string("Heap one"));
     delete onHeap.front();
+    onHeap.pop();
 }
 ```
