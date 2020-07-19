@@ -130,13 +130,17 @@ struct theQueue<T, N, true, Idxtype>{
         return *this;
     }
     //Container modifying functions
-    constexpr bool push(T theObj){//Pushes the given element value to the end of the queue
-        if(theSize == N){
-            return false;//queue is full
+    constexpr bool push(const T& theObj){//Pushes the given element value to the end of the queue
+        if(!checkSizeAndIndex()) return false;
+        if constexpr(std::is_trivially_copy_assignable<T>::value){
+            theArray[tail++] = Cell<T,true>(theObj);
+        } else {
+            new(&theArray[tail++].value)T(theObj);
         }
-        if(tail == N){
-            tail = 0;
-        }
+        return ++theSize; //++theSize always > 0. Return true
+    }
+    constexpr bool push(T&& theObj){//Pushes the given element value to the end of the queue
+        if(!checkSizeAndIndex()) return false;
         if constexpr(std::is_trivially_copy_assignable<T>::value){
             theArray[tail++] = Cell<T,true>(std::move(theObj));
         } else {
@@ -146,12 +150,7 @@ struct theQueue<T, N, true, Idxtype>{
     }
     template<typename ...Args> 
     constexpr bool emplace(Args&&... args){ //Same as push, but the element is constructed in-place
-        if(theSize == N){
-            return false;//queue is full
-        }
-        if(tail == N){
-            tail = 0;
-        }
+        if(!checkSizeAndIndex()) return false;
         if constexpr(std::is_trivially_copy_assignable<T>::value){
             theArray[tail++] = Cell<T,true>((args)...);
         } else {
@@ -201,6 +200,17 @@ struct theQueue<T, N, true, Idxtype>{
             for(; head < tail; ++head){
                 theArray[head].value.~T();
             }
+        }
+        //If it's full, nothing is added to the queue.
+        //If it reaches the array's end, construct T at index 0
+        constexpr bool checkSizeAndIndex(){
+            if(theSize == N){
+                return false;//queue is full
+            }
+            if(tail == N){
+                tail = 0;
+            }
+            return true;
         }
 };
 template<class T, std::size_t N, typename Idxtype>
