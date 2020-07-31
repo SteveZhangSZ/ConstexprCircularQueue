@@ -12,6 +12,8 @@ defaulted copy assignment. Said assignment only avoids deletion if T is triviall
 
 This queue is composed of a C style array of unions. The union has two members: an empty class and a variable 
 whose type depends on the template argument, class T.
+
+You can change the template parameter Idxtype to another integral type, like short, if you want to save space.
 ```
 template<class T, bool B> union Cell; //bool B == std::is_trivially_destructible<T>::value
 template<class T>

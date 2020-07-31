@@ -12,7 +12,7 @@ union Cell<T, true>{
     constexpr Cell() : forConstexprCtor{} {}
     //Initializes value with the provided parameter arguments
     template<typename... Args> 
-    constexpr Cell(Args&&... args) : value((args)...) {}
+    constexpr Cell(Args&&... args) : value(std::forward<Args>(args)...) {}
 };
 template<class T>
 union Cell<T, false>{
@@ -20,7 +20,7 @@ union Cell<T, false>{
     T value;
     constexpr Cell() : forConstexprCtor{} {}
     template<typename... Args> 
-    constexpr Cell(Args&&... args) : value((args)...) {}
+    constexpr Cell(Args&&... args) : value(std::forward<Args>(args)...) {}
     ~Cell(){} //Included because Cell<T, false>'s destructor is deleted
 };
 template<class T, std::size_t N, bool B, typename Idxtype> struct theQueue;
@@ -76,7 +76,7 @@ struct theQueue<T, N, true, Idxtype>{
     template<typename... Args, typename = 
     typename std::enable_if<(... && std::is_constructible_v<T,Args>)>::type >
     explicit constexpr theQueue(Args&&... theList) : head{0}, tail(sizeof...(theList)), theSize(sizeof...(theList)),
-    theArray{(theList)...}{}
+    theArray{std::forward<Args>(theList)...}{}
     constexpr theQueue& operator=(const theQueue& other){//Copy assignment
         std::size_t originalHead(head = other.head);
         if constexpr(!std::is_trivially_destructible<T>::value){
@@ -152,9 +152,9 @@ struct theQueue<T, N, true, Idxtype>{
     constexpr bool emplace(Args&&... args){ //Same as push, but the element is constructed in-place
         if(!checkSizeAndIndex()) return false;
         if constexpr(std::is_trivially_copy_assignable<T>::value){
-            theArray[tail++] = Cell<T,true>((args)...);
+            theArray[tail++] = Cell<T,true>(std::forward<Args>(args)...);
         } else {
-            new(&theArray[tail++].value)T((args)...);
+            new(&theArray[tail++].value)T(std::forward<Args>(args)...);
         }
         return ++theSize;
     }
@@ -216,7 +216,7 @@ struct theQueue<T, N, true, Idxtype>{
 template<class T, std::size_t N, typename Idxtype>
 struct theQueue<T, N, false, Idxtype> : public theQueue<T, N, true, Idxtype>{
     template<typename... Args>
-    theQueue(Args&&... theList) : theQueue<T, N, true, Idxtype>((theList)...) {}
+    theQueue(Args&&... theList) : theQueue<T, N, true, Idxtype>(std::forward<Args>(theList)...) {}
 
     ~theQueue(){this->clear();}
 };
